@@ -1,8 +1,15 @@
 import './App.css'
-import ReactFlow, {Background, Controls, MiniMap, ReactFlowProvider} from 'reactflow';
+import ReactFlow, {
+  Background,
+  Controls,
+  MiniMap,
+  ReactFlowProvider,
+  applyEdgeChanges,
+  applyNodeChanges
+} from 'reactflow';
 import 'reactflow/dist/style.css';
 import useSWR from "swr";
-import React, {useState} from "react";
+import React, { useCallback, useState } from 'react'
 import {HamburgerIcon} from '@chakra-ui/icons'
 import dagre from 'dagre';
 import {
@@ -77,6 +84,7 @@ function App() {
   const [methods, setMethods] = useState({});
   const [edges, setEdges] = useState([]);
   const [nodes, setNodes] = useState([]);
+  const [selectedMethod, setSelectedMethodMethod] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure()
   const onMethodSelect = async (signature) => {
     const res = await postData(`http://localhost:8080/api/methodCalls`, signature);
@@ -115,16 +123,27 @@ function App() {
 
     setNodes(layoutedNodes)
     setEdges(layoutedEdges)
+    setSelectedMethodMethod(signature)
   }
 
   const onClassSelect = async (clazz) => {
     methods[clazz.fqn] = await fetcher(`http://localhost:8080/api/methods?class=${clazz.fqn}`)
     setMethods(JSON.parse(JSON.stringify(methods)))
   }
+
+  const onNodesChange = useCallback(
+    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    []
+  );
+  const onEdgesChange = useCallback(
+    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    []
+  );
   return (
-    <div className="App" style={{ width: '100vw', height: '100vh' }}>
+    <div className="app">
       <div className="header">
         <IconButton icon={<HamburgerIcon/>} onClick={onOpen}/>
+        <p className="selected-method-name">{selectedMethod?.displayString || "None"}</p>
       </div>
       <Drawer placement='left' onClose={onClose} isOpen={isOpen}>
         <DrawerOverlay />
@@ -153,11 +172,17 @@ function App() {
       </Drawer>
 
       <ReactFlowProvider>
-        <ReactFlow nodes={nodes} edges={edges} nodesDraggable={true}>
-          <Background />
-          <Controls />
-          <MiniMap style={{height: 120}} zoomable pannable />
-        </ReactFlow>
+        <div className="flow-wrapper">
+          <ReactFlow
+            nodes={nodes}
+            onNodesChange={onNodesChange}
+            edges={edges}
+            onEdgesChange={onEdgesChange}>
+            <Background />
+            <Controls/>
+            <MiniMap/>
+          </ReactFlow>
+        </div>
       </ReactFlowProvider>
     </div>
   )
