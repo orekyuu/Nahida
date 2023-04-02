@@ -1,0 +1,7 @@
+.panel-wrapper {
+    background: white;
+    border-width: 1px;
+    padding: 8px;
+    display: flex;
+    flex-direction: row;
+}

@@ -5,8 +5,8 @@ import ReactFlow, {
   MiniMap,
   ReactFlowProvider,
   applyEdgeChanges,
-  applyNodeChanges
-} from 'reactflow';
+  applyNodeChanges, useReactFlow, useStoreApi, useOnSelectionChange
+} from 'reactflow'
 import 'reactflow/dist/style.css';
 import useSWR from "swr";
 import React, { useCallback, useState } from 'react'
@@ -25,6 +25,7 @@ import {
   useDisclosure
 } from '@chakra-ui/react'
 import {VscFileCode, VscPlay} from "react-icons/vsc";
+import ToolBar from './ToolBar.jsx'
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
@@ -81,6 +82,8 @@ function App() {
       "http://localhost:8080/api/classes",
       fetcher
   );
+  const { zoomIn, zoomOut, setCenter } = useReactFlow();
+  const store = useStoreApi();
   const [methods, setMethods] = useState({});
   const [edges, setEdges] = useState([]);
   const [nodes, setNodes] = useState([]);
@@ -139,6 +142,25 @@ function App() {
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
   );
+
+  const onMoveToSelectMethod = e => {
+    const { nodeInternals } = store.getState();
+    const target = Array.from(nodeInternals)
+      .map(([, node]) => node)
+      .find(node => node.id === selectedMethod.displayString)
+    if (target) {
+      const x = target.position.x + target.width / 2;
+      const y = target.position.y + target.height / 2;
+      const zoom = 1.85;
+      setCenter(x, y, { zoom, duration: 1000 });
+    }
+  };
+
+  useOnSelectionChange({
+    onChange: ({ nodes, edges }) => {
+
+    },
+  })
   return (
     <div className="app">
       <div className="header">
@@ -170,20 +192,19 @@ function App() {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
-
-      <ReactFlowProvider>
-        <div className="flow-wrapper">
-          <ReactFlow
-            nodes={nodes}
-            onNodesChange={onNodesChange}
-            edges={edges}
-            onEdgesChange={onEdgesChange}>
-            <Background />
-            <Controls/>
-            <MiniMap/>
-          </ReactFlow>
-        </div>
-      </ReactFlowProvider>
+      <div className="flow-wrapper">
+        <ReactFlow
+          nodes={nodes}
+          onNodesChange={onNodesChange}
+          edges={edges}
+          onEdgesChange={onEdgesChange}
+          fitView>
+          <Background />
+          <Controls/>
+          <MiniMap/>
+          <ToolBar onMoveToSelectMethod={onMoveToSelectMethod}/>
+        </ReactFlow>
+      </div>
     </div>
   )
 }
